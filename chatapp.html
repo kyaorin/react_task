@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>chatApp</title>
+  <style>
+    #output li {
+      background: lightgray;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>つぶやき掲示板</h1>
+  <!-- 入力場所を作成しよう -->
+  <form>
+    <fieldset>
+      <legend>つぶやき入力画面</legend>
+      <div>
+        name: <input type="text" id="name">
+      </div>
+      <div>
+        text: <input type="text" id="text">
+      </div>
+      <div>
+        <button type="button" id="send">send</button>
+      </div>
+    </fieldset>
+  </form>
+
+  <!-- データ出力場所 -->
+  <ul id="output"></ul>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script>
+    // 日時をいい感じの形式にする関数
+    function convertTimestampToDatetime(timestamp) {
+      const _d = timestamp ? new Date(timestamp * 1000) : new Date();
+      const Y = _d.getFullYear();
+      const m = (_d.getMonth() + 1).toString().padStart(2, '0');
+      const d = _d.getDate().toString().padStart(2, '0');
+      const H = _d.getHours().toString().padStart(2, '0');
+      const i = _d.getMinutes().toString().padStart(2, '0');
+      const s = _d.getSeconds().toString().padStart(2, '0');
+      return `${Y}/${m}/${d} ${H}:${i}:${s}`;
+    }
+  </script>
+  <!-- 以下にfirebaseのコードを貼り付けよう -->
+
+  <script type="module">
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
+
+  // 🔽 追加 / `9.2.0`の部分を↑のFirestoreから貼り付けたコードのバージョンに合わせる
+ import {
+   getFirestore,
+   collection,
+   addDoc,
+   serverTimestamp,
+   onSnapshot,
+   query,
+   orderBy,
+ } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
+
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+
+  //DB接続
+  const db = getFirestore(app);
+
+  //データを送信するときの処理
+  $("#send").on("click",function(){
+     const postData = {
+      name: $("#name").val(),
+      text: $("#text").val(),
+      time: serverTimestamp(),
+     };
+  addDoc(collection(db,"chat"),postData);
+  $("#text").val("");  
+  });
+
+
+ //データを取得するときの処理
+
+ const q = query(collection(db,"chat"),orderBy("time","desc"));
+ onSnapshot(q,(querySnapshot) => {
+    // console.log(querySnapshot.docs);
+
+    const documents = [];
+    querySnapshot.docs.forEach(function(doc){
+      const document = {
+        id: doc.id,
+        data: doc.data(),
+      };
+      documents.push(document);
+    });
+    console.log(documents);
+   //ここまでは毎回同じ
+
+   //ここから下は変わる
+   const elements = [];
+   documents.forEach(function (document){
+    elements.push(`
+      <li id="${document.id}">
+        <p>${document.data.name} at ${convertTimestampToDatetime(document.data.time.seconds)}</p>
+        <p>${document.data.text}</p>
+      </li>
+    `);
+
+    $("#output").html(elements);
+   });
+
+ });
+
+</script>
+
+
+</body>
+
+</html>
